@@ -1,0 +1,7 @@
+{
+  "name": "portfolio-grader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "持仓体检 - 基于《聪明的投资者》的格雷厄姆式持仓评分工具"
+}

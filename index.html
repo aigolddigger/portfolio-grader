@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>持仓体检 · Portfolio Grader</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta name="description" content="输入持仓，基于《聪明的投资者》原则生成专属价值投资分析报告">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a href="/" class="brand">
+      <svg class="brand-mark" width="26" height="26" viewBox="0 0 56 56" aria-hidden="true">
+        <rect width="56" height="56" rx="12" fill="#123E33"/>
+        <path d="M 14 38 A 18 18 0 0 1 42 38" fill="none" stroke="#E4EFEA" stroke-width="4" stroke-linecap="round" opacity="0.35"/>
+        <path d="M 14 38 A 18 18 0 0 1 31 21" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="28" cy="38" r="2.5" fill="#FFFFFF"/>
+      </svg>
+      <span class="brand-name" data-i18n="brandName">持仓体检</span>
+    </a>
+    <nav class="header-nav">
+      <a href="#principles" data-i18n="navPrinciples">原则</a>
+      <a href="#how" data-i18n="navHow">怎么用</a>
+      <button type="button" class="lang-toggle" id="lang-toggle" data-i18n="langToggle">EN</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <div class="hero-text">
+        <p class="eyebrow" data-i18n="heroEyebrow">PORTFOLIO GRADER · 基于《聪明的投资者》</p>
+        <h1>
+          <span data-i18n="heroTitleLine1">你的持仓，</span><br>
+          <span class="hl" data-i18n="heroTitleHighlight">经得起检验吗</span>
+        </h1>
+        <p class="hero-sub" data-i18n="heroSub">输入持仓代码和权重，生成基于格雷厄姆价值投资原则的体检报告 — 不是买卖建议，而是一面镜子。</p>
+        <a href="#grader" class="btn-primary"><span data-i18n="heroCta">开始体检</span> <span class="arrow">→</span></a>
+      </div>
+      <div class="hero-gauge" aria-hidden="true">
+        <svg viewBox="0 0 320 200" class="gauge-svg">
+          <path d="M 30 170 A 130 130 0 0 1 290 170" class="gauge-track" fill="none" stroke-width="14" stroke-linecap="round"/>
+          <path d="M 30 170 A 130 130 0 0 1 200 48" class="gauge-fill" fill="none" stroke-width="14" stroke-linecap="round"/>
+          <line x1="160" y1="170" x2="205" y2="75" class="gauge-needle" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="160" cy="170" r="7" class="gauge-pivot"/>
+          <text x="55" y="195" class="gauge-label-text" data-i18n="gaugeHigh">高估</text>
+          <text x="240" y="195" class="gauge-label-text" data-i18n="gaugeLow">低估</text>
+        </svg>
+        <p class="gauge-caption" data-i18n="gaugeCaption">安全边际 — 价格与价值的距离</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="principles" id="principles">
+    <div class="wrap">
+      <p class="section-eyebrow" data-i18n="principlesEyebrow">三条准绳</p>
+      <div class="principle-grid">
+        <div class="principle-card">
+          <span class="principle-num">01</span>
+          <h3 data-i18n="p1Title">安全边际</h3>
+          <p data-i18n="p1Body">以明显低于内在价值的价格买入，给判断失误留出缓冲。</p>
+        </div>
+        <div class="principle-card">
+          <span class="principle-num">02</span>
+          <h3 data-i18n="p2Title">市场先生</h3>
+          <p data-i18n="p2Body">市场报价是仆人，不是主人。短期波动是机会，不是行动指南。</p>
+        </div>
+        <div class="principle-card">
+          <span class="principle-num">03</span>
+          <h3 data-i18n="p3Title">分散与纪律</h3>
+          <p data-i18n="p3Body">防御型投资者持有足够分散的资产，单一标的不应主宰命运。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grader" id="grader">
+    <div class="wrap">
+      <p class="section-eyebrow" data-i18n="graderEyebrow">输入持仓</p>
+      <h2 class="section-title" data-i18n="graderTitle">填入代码与权重，开始体检</h2>
+
+      <div class="grader-card">
+        <div class="rows-header">
+          <span data-i18n="colTicker">股票 / ETF 代码</span>
+          <span data-i18n="colWeight">占比 %</span>
+          <span></span>
+        </div>
+        <p class="scope-hint" data-i18n="scopeHint">目前仅支持美股及美股 ETF 代码（含中概股 ADR，如 BABA），暂不支持 A 股 / 港股代码</p>
+        <div id="holdings-list"></div>
+        <button type="button" class="add-row-btn" id="add-row" data-i18n="addRow">+ 添加一行</button>
+
+        <div class="weight-summary">
+          <span data-i18n="weightTotal">权重合计</span>
+          <span id="weight-total" class="weight-value">0%</span>
+        </div>
+
+        <div class="grader-meta">
+          <div class="field">
+            <label for="fund-size" data-i18n="fundLabel">资金规模（万元，可选）</label>
+            <input type="number" id="fund-size" data-i18n-placeholder="fundPlaceholder" placeholder="例如 100" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="invest-style" data-i18n="styleLabel">投资风格</label>
+            <select id="invest-style">
+              <option value="defensive" data-i18n="styleDefensive">防御型</option>
+              <option value="aggressive" data-i18n="styleAggressive">进取型</option>
+              <option value="unsure" data-i18n="styleUnsure">不确定</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="examples">
+          <span class="examples-label" data-i18n="examplesLabel">快速试用</span>
+          <button type="button" class="chip" data-example="tech" data-i18n="exTech">科技 ETF 组合</button>
+          <button type="button" class="chip" data-example="mixed" data-i18n="exMixed">中美混合持仓</button>
+          <button type="button" class="chip" data-example="single" data-i18n="exSingle">单一重仓股</button>
+        </div>
+
+        <button type="button" class="btn-generate" id="generate-btn" data-i18n="generateBtn">
+          生成持仓体检报告
+        </button>
+        <p class="form-note" data-i18n="formNote">数据来自公开行情接口，存在延迟与误差 · 不构成投资建议</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="report-section" id="report-section" hidden>
+    <div class="wrap">
+      <div id="report-output"></div>
+    </div>
+  </section>
+
+  <section class="how" id="how">
+    <div class="wrap how-inner">
+      <p class="section-eyebrow" data-i18n="howEyebrow">怎么用</p>
+      <ol class="how-steps">
+        <li><span class="step-num">01</span><span class="step-text" data-i18n="how1">输入你的持仓代码和占比，权重无需精确到小数点。</span></li>
+        <li><span class="step-num">02</span><span class="step-text" data-i18n="how2">系统拉取当日行情与估值数据，比对格雷厄姆的核心准绳。</span></li>
+        <li><span class="step-num">03</span><span class="step-text" data-i18n="how3">生成三项评分与逐条点评，附带一句话总结，方便分享。</span></li>
+      </ol>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p data-i18n="footerText">持仓体检是一个免费工具，基于本杰明·格雷厄姆《聪明的投资者》中的价值投资原则。所有内容仅供参考，不构成投资建议。</p>
+  </div>
+</footer>
+
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script src="js/grader.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
