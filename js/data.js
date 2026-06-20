@@ -70,12 +70,18 @@ const MarketData = (() => {
       const result = {};
       tickers.forEach(t => {
         const match = json.find(q => q.symbol === t.toUpperCase());
-        result[t] = match ? {
+        if (!match || match.unavailable) {
+          // 这只标的本身就拿不到数据（新股/退市/代码错误等），
+          // 不影响其他标的，标记为 null，由评分引擎和UI层决定如何呈现
+          result[t] = null;
+          return;
+        }
+        result[t] = {
           price: match.price,
           peRatio: match.peRatio ?? null,
           yearChangePct: match.changePercentage,
           name: match.name
-        } : null;
+        };
       });
       return { data: result, isDemo: false, quotaExceeded: !!payload?.quotaExceeded };
     } catch (err) {
