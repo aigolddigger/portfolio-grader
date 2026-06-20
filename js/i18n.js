@@ -51,6 +51,7 @@ const I18N = (() => {
       alertEmpty: "请至少输入一只持仓",
 
       reportDemo: "演示数据",
+      quotaExceededBanner: "今日免费行情额度已用完，当前展示的是演示数据，请明天再来获取实时数据。",
       reportTitle: "持仓体检报告",
       scoreMargin: "安全边际",
       scoreDefensive: "防御性",
@@ -147,6 +148,7 @@ const I18N = (() => {
       alertEmpty: "Add at least one holding first",
 
       reportDemo: "Demo data",
+      quotaExceededBanner: "Today's free data quota has been used up. Showing demo data for now — please check back tomorrow for live quotes.",
       reportTitle: "Portfolio checkup report",
       scoreMargin: "Margin of safety",
       scoreDefensive: "Defensiveness",

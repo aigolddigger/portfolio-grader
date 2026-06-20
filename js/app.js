@@ -87,7 +87,7 @@
     return { high: I18N.t('bandHigh'), mid: I18N.t('bandMid'), low: I18N.t('bandLow') }[band];
   }
 
-  function renderReport(report, isDemo) {
+  function renderReport(report, isDemo, quotaExceeded) {
     const { date, scores, reviews, actions, summary } = report;
 
     const scoreCell = (label, s) => `
@@ -104,7 +104,12 @@
 
     const actionItem = (a, i) => `<li data-n="${String(i + 1).padStart(2, "0")}">${a}</li>`;
 
+    const quotaBanner = (isDemo && quotaExceeded) ? `
+      <div class="quota-banner">${I18N.t('quotaExceededBanner')}</div>
+    ` : "";
+
     reportOutput.innerHTML = `
+      ${quotaBanner}
       <div class="report-card">
         <p class="report-date">${date}${isDemo ? " · " + I18N.t('reportDemo') : ""}</p>
         <h3 class="report-title">${I18N.t('reportTitle')}</h3>
@@ -163,10 +168,10 @@
 
     try {
       const tickers = holdings.map(h => h.ticker);
-      const { data: quotes, isDemo } = await MarketData.fetchQuotes(tickers);
+      const { data: quotes, isDemo, quotaExceeded } = await MarketData.fetchQuotes(tickers);
       const report = GrahamGrader.generateReport(holdings, quotes, meta);
-      lastReport = { holdings, quotes, meta, isDemo }; // 保存原始输入，供语言切换后重新生成文案
-      renderReport(report, isDemo);
+      lastReport = { holdings, quotes, meta, isDemo, quotaExceeded }; // 保存原始输入，供语言切换后重新生成文案
+      renderReport(report, isDemo, quotaExceeded);
     } catch (err) {
       console.error(err);
       reportOutput.innerHTML = `<div class="report-card"><p class="report-loading">${I18N.t('errorText')}</p></div>`;
@@ -188,7 +193,7 @@
 
     if (lastReport) {
       const report = GrahamGrader.generateReport(lastReport.holdings, lastReport.quotes, lastReport.meta);
-      renderReport(report, lastReport.isDemo);
+      renderReport(report, lastReport.isDemo, lastReport.quotaExceeded);
     }
   }
 

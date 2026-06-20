@@ -10,13 +10,17 @@
  * 本地用 `python3 -m http.server` 这类纯静态服务器预览时，/api/quote
  * 是访问不到的（Serverless Function 只在 Vercel 部署后才存在），
  * 此时会自动退回到下面的演示数据，保证本地预览依然可用。
+ *
+ * 返回值新增 quotaExceeded 字段：当 /api/quote 因为 FMP 免费额度用尽
+ * （429/403）而失败时，这里会标记为 true，前端据此显示更明确的提示，
+ * 区别于网络错误等其他原因导致的普通降级。
  * ----------------------------------------------------------------
  */
 
 const MarketData = (() => {
   const QUOTE_ENDPOINT = "/api/quote";
 
-  // 演示数据：当 /api/quote 不可用时使用（本地预览，或服务器端未配置 Key）
+  // 演示数据：当 /api/quote 不可用时使用（本地预览，或服务器端未配置 Key，或额度用尽）
   const DEMO_DATA = {
     VOO:  { price: 602.95, peRatio: 27.7,  yearChangePct: 18.2, name: "Vanguard S&P 500 ETF" },
     QQQM: { price: 240.10, peRatio: 33.4,  yearChangePct: 27.0, name: "Invesco NASDAQ 100 ETF" },
@@ -28,15 +32,15 @@ const MarketData = (() => {
     NVDA: { price: 142.80, peRatio: 38.6,  yearChangePct: 91.5, name: "NVIDIA Corporation" },
   };
 
-  function fallbackToDemo(tickers) {
+  function fallbackToDemo(tickers, quotaExceeded = false) {
     const result = {};
     tickers.forEach(t => { result[t] = DEMO_DATA[t] || null; });
-    return { data: result, isDemo: true };
+    return { data: result, isDemo: true, quotaExceeded };
   }
 
   /**
    * 拉取一组 ticker 的行情快照，通过本站的 /api/quote 代理。
-   * 返回 { TICKER: { price, peRatio, yearChangePct, name } }
+   * 返回 { data: { TICKER: { price, peRatio, yearChangePct, name } }, isDemo, quotaExceeded }
    */
   async function fetchQuotes(tickers) {
     const symbols = tickers.join(",");
@@ -44,10 +48,20 @@ const MarketData = (() => {
     try {
       const res = await fetch(`${QUOTE_ENDPOINT}?tickers=${encodeURIComponent(symbols)}`);
       if (!res.ok) {
-        console.warn(`/api/quote 返回 ${res.status}，回退到演示数据`);
-        return fallbackToDemo(tickers);
+        // 尝试读取服务器返回的错误详情，看是否是额度用尽
+        let quotaExceeded = false;
+        try {
+          const errJson = await res.json();
+          quotaExceeded = !!errJson.quotaExceeded;
+        } catch {
+          // 响应体不是 JSON 或为空，忽略，按普通错误处理
+        }
+        console.warn(`/api/quote 返回 ${res.status}，回退到演示数据${quotaExceeded ? "（额度已用尽）" : ""}`);
+        return fallbackToDemo(tickers, quotaExceeded);
       }
-      const json = await res.json();
+
+      const payload = await res.json();
+      const json = payload?.data;
       if (!Array.isArray(json)) {
         console.warn("/api/quote 返回格式异常，回退到演示数据");
         return fallbackToDemo(tickers);
@@ -58,12 +72,12 @@ const MarketData = (() => {
         const match = json.find(q => q.symbol === t.toUpperCase());
         result[t] = match ? {
           price: match.price,
-          peRatio: match.pe,
-          yearChangePct: match.changesPercentage,
+          peRatio: match.peRatio ?? null,
+          yearChangePct: match.changePercentage,
           name: match.name
         } : null;
       });
-      return { data: result, isDemo: false };
+      return { data: result, isDemo: false, quotaExceeded: !!payload?.quotaExceeded };
     } catch (err) {
       console.error("行情获取失败，回退到演示数据：", err);
       return fallbackToDemo(tickers);
