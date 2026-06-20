@@ -33,10 +33,24 @@
  *   对应字段为 null，不影响其他标的，也不影响整体响应状态码。
  *   只有当"全部 ticker 的 quote 都失败"时，才判定为系统性问题
  *   （例如 Key 失效、整体限流），这时才标记 quotaExceeded。
+ *
+ * 并发问题（这次新发现，写给未来维护者）：
+ *   实测发现，4 个 ticker 用 Promise.all 并发发起 8 个请求（4次quote +
+ *   4次key-metrics）时，往往只有 1-2 个成功，其余全部 402/429，且失败
+ *   的不是固定某个 ticker——同样的 ticker 这次失败、下次可能就成功。
+ *   FMP 官方 FAQ 提到其后端是多节点负载均衡架构，短时间并发请求可能被
+ *   分散路由到不同节点，节点间的免费层限流状态未必同步，导致瞬时并发
+ *   下大量请求被误判超限。解法：把所有请求改为串行执行，每个请求之间
+ *   插入约 120ms 间隔，牺牲一些总耗时换取成功率。
  * ----------------------------------------------------------------
  */
 
 const FMP_BASE = "https://financialmodelingprep.com/stable";
+const REQUEST_GAP_MS = 120;
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function fetchSingleQuote(ticker, apiKey) {
   try {
@@ -98,11 +112,19 @@ export default async function handler(req, res) {
   const tickerList = [...new Set(sanitized.split(",").filter(Boolean))];
 
   try {
-    // 每个 ticker 的 quote 和 key-metrics 都独立请求、独立容错
-    const [quoteResults, metricsResults] = await Promise.all([
-      Promise.all(tickerList.map(t => fetchSingleQuote(t, apiKey))),
-      Promise.all(tickerList.map(t => fetchSingleMetrics(t, apiKey)))
-    ]);
+    // 串行执行：每个 ticker 的 quote 紧跟它自己的 key-metrics，
+    // 完成后间隔一小段时间再处理下一个 ticker，避免瞬时并发触发误限流
+    const quoteResults = [];
+    const metricsResults = [];
+    for (let i = 0; i < tickerList.length; i++) {
+      const ticker = tickerList[i];
+      const q = await fetchSingleQuote(ticker, apiKey);
+      quoteResults.push(q);
+      await sleep(REQUEST_GAP_MS);
+      const m = await fetchSingleMetrics(ticker, apiKey);
+      metricsResults.push(m);
+      if (i < tickerList.length - 1) await sleep(REQUEST_GAP_MS);
+    }
 
     // 只有当全部 ticker 的 quote 都失败、且失败原因是限额/权限类（401/402/403/429）时，
     // 才判定为系统性问题，标记 quotaExceeded，让前端整体回退演示数据
